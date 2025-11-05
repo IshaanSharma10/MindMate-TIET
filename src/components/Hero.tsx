@@ -1,7 +1,10 @@
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import heroIllustration from "@/assets/hero-illustration.png";
 
 const Hero = () => {
+  const navigate = useNavigate();
+
   return (
     <section className="container mx-auto px-4 py-12 md:px-6 md:py-16 lg:px-8 lg:py-24">
       <div className="flex flex-col items-center gap-8 lg:flex-row lg:gap-12">
@@ -27,6 +30,7 @@ const Hero = () => {
           <div className="flex flex-col gap-4 sm:flex-row sm:justify-center lg:justify-start">
             <Button
               size="lg"
+              onClick={() => navigate("/chat")}
               className="bg-cta-blue text-cta-blue-foreground hover:bg-cta-blue/90 transition-all duration-200 hover:scale-105"
             >
               Start Chat
@@ -34,6 +38,7 @@ const Hero = () => {
             <Button
               size="lg"
               variant="outline"
+              onClick={() => navigate("/insights")}
               className="border-2 hover:bg-secondary transition-all duration-200 hover:scale-105"
             >
               View Insights

@@ -1,4 +1,5 @@
 import { Bell } from "lucide-react";
+import { NavLink } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import avatarImage from "@/assets/avatar.png";
 
@@ -44,18 +45,47 @@ const Header = () => {
           </div>
 
           <nav className="hidden md:flex items-center gap-8">
-            <Button variant="ghost" className="font-medium hover:text-primary">
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) =>
+                `font-medium transition-colors ${
+                  isActive ? "text-primary" : "text-foreground hover:text-primary"
+                }`
+              }
+            >
               Home
-            </Button>
-            <Button variant="ghost" className="font-medium hover:text-primary">
+            </NavLink>
+            <NavLink
+              to="/chat"
+              className={({ isActive }) =>
+                `font-medium transition-colors ${
+                  isActive ? "text-primary" : "text-foreground hover:text-primary"
+                }`
+              }
+            >
               Chat
-            </Button>
-            <Button variant="ghost" className="font-medium hover:text-primary">
+            </NavLink>
+            <NavLink
+              to="/insights"
+              className={({ isActive }) =>
+                `font-medium transition-colors ${
+                  isActive ? "text-primary" : "text-foreground hover:text-primary"
+                }`
+              }
+            >
               Insights
-            </Button>
-            <Button variant="ghost" className="font-medium hover:text-primary">
+            </NavLink>
+            <NavLink
+              to="/settings"
+              className={({ isActive }) =>
+                `font-medium transition-colors ${
+                  isActive ? "text-primary" : "text-foreground hover:text-primary"
+                }`
+              }
+            >
               Settings
-            </Button>
+            </NavLink>
           </nav>
 
           <div className="flex items-center gap-3">
