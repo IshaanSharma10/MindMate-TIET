@@ -1,13 +1,11 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import Header from "@/components/Header";
+import { Brain, ArrowLeft, Sparkles, Shield, Heart } from "lucide-react";
 
 const Signup = () => {
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -23,63 +21,170 @@ const Signup = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <div className="container mx-auto px-4 py-12 flex items-center justify-center min-h-[calc(100vh-80px)]">
-        <Card className="w-full max-w-md">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">Create an account</CardTitle>
-            <CardDescription className="text-center">
-              Start your mental wellness journey with MindMate
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+    <div className="min-h-screen bg-gradient-to-br from-accent/5 via-background to-primary/5 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Decorative background elements */}
+      <div className="absolute top-0 left-0 w-96 h-96 bg-accent/10 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/2" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl translate-y-1/2 translate-x-1/2" />
+      
+      {/* Back to home button */}
+      <Link 
+        to="/" 
+        className="absolute top-6 left-6 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span className="text-sm">Back to home</span>
+      </Link>
+
+      <div className="w-full max-w-6xl relative z-10 animate-fade-in">
+        <div className="grid lg:grid-cols-2 gap-8 items-center">
+          {/* Left side - Benefits */}
+          <div className="hidden lg:block space-y-8">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="p-3 rounded-xl bg-accent/10">
+                  <Brain className="w-8 h-8 text-accent" />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full">
-                Sign Up
-              </Button>
-            </form>
-            <div className="mt-4 text-center text-sm">
-              Already have an account?{" "}
-              <Link to="/login" className="text-primary hover:underline">
-                Sign in
-              </Link>
+              <h1 className="text-4xl font-bold leading-tight">
+                Start your journey to better mental health
+              </h1>
+              <p className="text-lg text-muted-foreground">
+                Join thousands who trust MindMate for their wellness journey
+              </p>
             </div>
-          </CardContent>
-        </Card>
+
+            <div className="space-y-6">
+              <div className="flex gap-4">
+                <div className="p-3 rounded-lg bg-primary/10 h-fit">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-1">AI-Powered Insights</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Get personalized recommendations based on your mood and activities
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="p-3 rounded-lg bg-accent/10 h-fit">
+                  <Shield className="w-5 h-5 text-accent" />
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-1">Private & Secure</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Your data is encrypted and never shared with third parties
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="p-3 rounded-lg bg-primary/10 h-fit">
+                  <Heart className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-1">Track Your Progress</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Monitor your mental wellness journey with detailed insights
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right side - Signup form */}
+          <div className="w-full max-w-md mx-auto">
+            <div className="text-center mb-6 lg:hidden">
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <div className="p-3 rounded-xl bg-accent/10">
+                  <Brain className="w-8 h-8 text-accent" />
+                </div>
+              </div>
+              <h1 className="text-3xl font-bold mb-2">Create your account</h1>
+              <p className="text-muted-foreground">Start your wellness journey today</p>
+            </div>
+
+            <div className="lg:text-center lg:mb-6 hidden lg:block">
+              <h2 className="text-2xl font-bold mb-2">Create your account</h2>
+              <p className="text-muted-foreground">Get started in less than a minute</p>
+            </div>
+
+            <div className="bg-card/80 backdrop-blur-sm border border-border rounded-2xl p-8 shadow-xl">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm font-medium">
+                    Email address
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="h-11"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-sm font-medium">
+                    Password
+                  </Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="h-11"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Must be at least 8 characters
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="text-sm font-medium">
+                    Confirm password
+                  </Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    className="h-11"
+                  />
+                </div>
+
+                <Button 
+                  type="submit" 
+                  className="w-full h-11 text-base font-medium bg-accent hover:bg-accent/90"
+                >
+                  Create Account
+                </Button>
+              </form>
+
+              <div className="mt-6 text-center">
+                <p className="text-sm text-muted-foreground">
+                  Already have an account?{" "}
+                  <Link 
+                    to="/login" 
+                    className="text-primary font-medium hover:underline"
+                  >
+                    Sign in
+                  </Link>
+                </p>
+              </div>
+            </div>
+
+            <p className="text-center text-xs text-muted-foreground mt-6">
+              By creating an account, you agree to our Terms of Service and Privacy Policy
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
