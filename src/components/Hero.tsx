@@ -30,18 +30,18 @@ const Hero = () => {
           <div className="flex flex-col gap-4 sm:flex-row sm:justify-center lg:justify-start">
             <Button
               size="lg"
-              onClick={() => navigate("/chat")}
+              onClick={() => navigate("/signup")}
               className="bg-cta-blue text-cta-blue-foreground hover:bg-cta-blue/90 transition-all duration-200 hover:scale-105"
             >
-              Start Chat
+              Get Started
             </Button>
             <Button
               size="lg"
               variant="outline"
-              onClick={() => navigate("/insights")}
+              onClick={() => navigate("/login")}
               className="border-2 hover:bg-secondary transition-all duration-200 hover:scale-105"
             >
-              View Insights
+              Sign In
             </Button>
           </div>
         </div>
