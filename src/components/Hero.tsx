@@ -1,9 +1,21 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import heroIllustration from "@/assets/hero-illustration.png";
+import { auth } from "../FirebaseConfig"; 
+import { onAuthStateChanged, User } from "firebase/auth";
 
 const Hero = () => {
   const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>(null);
+
+  // ✅ Listen to login state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
 
   return (
     <section className="container mx-auto px-4 py-12 md:px-6 md:py-16 lg:px-8 lg:py-24">
@@ -24,25 +36,50 @@ const Hero = () => {
             </span>
             —your calm AI companion.
           </h1>
+
           <p className="mb-8 text-lg text-muted-foreground md:text-xl">
             Share how you feel and receive gentle reflections.
           </p>
+
           <div className="flex flex-col gap-4 sm:flex-row sm:justify-center lg:justify-start">
-            <Button
-              size="lg"
-              onClick={() => navigate("/signup")}
-              className="bg-cta-blue text-cta-blue-foreground hover:bg-cta-blue/90 transition-all duration-200 hover:scale-105"
-            >
-              Get Started
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => navigate("/login")}
-              className="border-2 hover:bg-secondary transition-all duration-200 hover:scale-105"
-            >
-              Sign In
-            </Button>
+            {/* ✅ Conditionally render buttons based on auth state */}
+            {user ? (
+              <>
+                <Button
+                  size="lg"
+                  onClick={() => navigate("/chat")}
+                  className="bg-cta-blue text-cta-blue-foreground hover:bg-cta-blue/90 transition-all duration-200 hover:scale-105"
+                >
+                  Chat
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => navigate("/insights")}
+                  className="border-2 hover:bg-secondary transition-all duration-200 hover:scale-105"
+                >
+                  Insights
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  size="lg"
+                  onClick={() => navigate("/signup")}
+                  className="bg-cta-blue text-cta-blue-foreground hover:bg-cta-blue/90 transition-all duration-200 hover:scale-105"
+                >
+                  Get Started
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => navigate("/login")}
+                  className="border-2 hover:bg-secondary transition-all duration-200 hover:scale-105"
+                >
+                  Sign In
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>

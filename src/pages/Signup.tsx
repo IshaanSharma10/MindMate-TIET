@@ -1,23 +1,53 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Brain, ArrowLeft, Sparkles, Shield, Heart } from "lucide-react";
+import { Brain, ArrowLeft, Sparkles, Shield, Heart, Loader2 } from "lucide-react";
+import { auth, provider } from "../FirebaseConfig"; // adjust import path
+import { createUserWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 
 const Signup = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (password !== confirmPassword) {
-      console.error("Passwords don't match");
+      alert("Passwords do not match!");
       return;
     }
-    // Firebase authentication logic will go here
-    console.log("Signup attempt:", { email, password });
+
+    setLoading(true);
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      console.log("Signup successful:", email);
+      navigate("/");
+    } catch (error: any) {
+      console.error("Signup error:", error.message);
+      alert(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignup = async () => {
+    setLoading(true);
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      console.log("Google signup successful:", user);
+      navigate("/");
+    } catch (error: any) {
+      console.error("Google signup error:", error.message);
+      alert(error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -37,6 +67,7 @@ const Signup = () => {
 
       <div className="w-full max-w-6xl relative z-10 animate-fade-in">
         <div className="grid lg:grid-cols-2 gap-8 items-center">
+          
           {/* Left side - Benefits */}
           <div className="hidden lg:block space-y-8">
             <div className="space-y-4">
@@ -110,7 +141,7 @@ const Signup = () => {
             </div>
 
             <div className="bg-card/80 backdrop-blur-sm border border-border rounded-2xl p-8 shadow-xl">
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-sm font-medium">
                     Email address
@@ -161,11 +192,41 @@ const Signup = () => {
 
                 <Button 
                   type="submit" 
-                  className="w-full h-11 text-base font-medium bg-accent hover:bg-accent/90"
+                  className="w-full h-11 text-base font-medium bg-accent hover:bg-accent/90 flex items-center justify-center gap-2"
+                  disabled={loading}
                 >
-                  Create Account
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create Account"
+                  )}
                 </Button>
               </form>
+
+              {/* OR divider */}
+              <div className="flex items-center my-6">
+                <div className="flex-1 border-t border-border" />
+                <span className="px-3 text-xs text-muted-foreground">OR</span>
+                <div className="flex-1 border-t border-border" />
+              </div>
+
+              {/* Google Signup Button */}
+              <Button
+                onClick={handleGoogleSignup}
+                variant="outline"
+                className="w-full h-11 text-base font-medium flex items-center justify-center gap-2"
+                disabled={loading}
+              >
+                <img
+                  src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+                  alt="Google"
+                  className="w-5 h-5"
+                />
+                Continue with Google
+              </Button>
 
               <div className="mt-6 text-center">
                 <p className="text-sm text-muted-foreground">
