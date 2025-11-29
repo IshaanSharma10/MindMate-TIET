@@ -376,14 +376,18 @@ const Insights = () => {
                         </Badge>
                       </div>
                       <div className="flex gap-2 flex-wrap">
-                        {Object.entries(moods).map(([mood, count]: [string, any]) => (
-                          <span
-                            key={mood}
-                            className="text-xs text-muted-foreground"
-                          >
-                            {mood}: {Math.round((count / total) * 100)}%
-                          </span>
-                        ))}
+                        {Object.entries(moods).map(([mood, count]: [string, any]) => {
+                          const countNum = typeof count === 'number' ? count : Number(count) || 0;
+                          const totalNum = typeof total === 'number' ? total : Number(total) || 1;
+                          return (
+                            <span
+                              key={mood}
+                              className="text-xs text-muted-foreground"
+                            >
+                              {mood}: {Math.round((countNum / totalNum) * 100)}%
+                            </span>
+                          );
+                        })}
                       </div>
                     </div>
                   );
