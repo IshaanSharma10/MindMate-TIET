@@ -109,3 +109,69 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* Breathing Exercise Animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-20px) scale(1.2);
+    opacity: 0.9;
+  }
+}
+
+@keyframes breathe-in {
+  0% {
+    transform: scale(0.8);
+  }
+  100% {
+    transform: scale(1.3);
+  }
+}
+
+@keyframes breathe-out {
+  0% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(0.7);
+  }
+}
+
+@keyframes breathe-hold {
+  0%, 100% {
+    transform: scale(1.0);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.breathing-circle {
+  transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.breathing-circle.inhale {
+  animation: breathe-in 4s ease-in-out infinite;
+}
+
+.breathing-circle.exhale {
+  animation: breathe-out 4s ease-in-out infinite;
+}
+
+.breathing-circle.hold {
+  animation: breathe-hold 2s ease-in-out infinite;
+}

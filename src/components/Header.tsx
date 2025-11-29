@@ -77,6 +77,36 @@ const Header = () => {
               Insights
             </NavLink>
             <NavLink
+              to="/journal"
+              className={({ isActive }) =>
+                `font-medium transition-colors ${
+                  isActive ? "text-primary" : "text-foreground hover:text-primary"
+                }`
+              }
+            >
+              Journal
+            </NavLink>
+            <NavLink
+              to="/wellness"
+              className={({ isActive }) =>
+                `font-medium transition-colors ${
+                  isActive ? "text-primary" : "text-foreground hover:text-primary"
+                }`
+              }
+            >
+              Wellness
+            </NavLink>
+            <NavLink
+              to="/mood-tracker"
+              className={({ isActive }) =>
+                `font-medium transition-colors ${
+                  isActive ? "text-primary" : "text-foreground hover:text-primary"
+                }`
+              }
+            >
+              Mood Tracker
+            </NavLink>
+            <NavLink
               to="/settings"
               className={({ isActive }) =>
                 `font-medium transition-colors ${

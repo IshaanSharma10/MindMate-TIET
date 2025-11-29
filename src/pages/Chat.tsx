@@ -1,28 +1,70 @@
-import { useState } from "react";
-import { Send } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Send, AlertTriangle, Phone, MessageSquare } from "lucide-react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Card, CardContent } from "@/components/ui/card";
+import { auth } from "@/FirebaseConfig";
+import { onAuthStateChanged, User } from "firebase/auth";
 
 interface Message {
   id: number;
   text: string;
   sender: "user" | "ai";
   timestamp: Date;
+  crisisDetected?: boolean;
 }
 
 const Chat = () => {
+  const [user, setUser] = useState<User | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: "Hello! I'm MindMate, your calm AI companion. How are you feeling today?",
+      text: "Hello! I'm MindMate, your compassionate AI mental health coach. How are you feeling today?",
       sender: "ai",
       timestamp: new Date(),
     },
   ]);
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showCrisisAlert, setShowCrisisAlert] = useState(false);
+  const [crisisResources, setCrisisResources] = useState<any>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Save session when messages change (debounced)
+  useEffect(() => {
+    if (!user || messages.length < 2) return; // Don't save initial greeting
+
+    const saveSession = async () => {
+      try {
+        await fetch("http://localhost:5001/api/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: user.uid,
+            messages: messages.map((m) => ({
+              role: m.sender === "user" ? "user" : "model",
+              content: m.text,
+            })),
+          }),
+        });
+      } catch (error) {
+        console.error("Failed to save session:", error);
+      }
+    };
+
+    // Debounce: save 2 seconds after last message
+    const timer = setTimeout(saveSession, 2000);
+    return () => clearTimeout(timer);
+  }, [messages, user]);
 
   // ✅ Send message to backend and update UI
   const handleSend = async (e?: React.FormEvent) => {
@@ -51,6 +93,7 @@ const Chat = () => {
             role: m.sender === "user" ? "user" : "model",
             content: m.text,
           })),
+          userId: user?.uid || "anonymous",
         }),
       });
 
@@ -63,9 +106,16 @@ const Chat = () => {
           "I'm here with you — could you tell me a bit more about that?",
         sender: "ai",
         timestamp: new Date(),
+        crisisDetected: data.crisisDetected || false,
       };
 
       setMessages((prev) => [...prev, aiMessage]);
+
+      // Handle crisis detection
+      if (data.crisisDetected) {
+        setShowCrisisAlert(true);
+        setCrisisResources(data.resources);
+      }
 
       if (data.mood) {
         localStorage.setItem(
@@ -100,6 +150,42 @@ const Chat = () => {
             </p>
           </div>
 
+          {showCrisisAlert && crisisResources && (
+            <Alert variant="destructive" className="mb-4 animate-fade-in">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Immediate Support Available</AlertTitle>
+              <AlertDescription className="mt-2">
+                <div className="space-y-2">
+                  <p>If you're in immediate danger, please call emergency services (911 in US).</p>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {crisisResources.hotline && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="bg-red-50 hover:bg-red-100"
+                        onClick={() => window.open(`tel:${crisisResources.hotline}`)}
+                      >
+                        <Phone className="h-3 w-3 mr-1" />
+                        Call {crisisResources.hotline}
+                      </Button>
+                    )}
+                    {crisisResources.textLine && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="bg-red-50 hover:bg-red-100"
+                        onClick={() => window.open(`sms:${crisisResources.textLine}`)}
+                      >
+                        <MessageSquare className="h-3 w-3 mr-1" />
+                        Text {crisisResources.textLine}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="rounded-lg border border-border bg-card shadow-sm animate-fade-in">
             <ScrollArea className="h-[calc(100vh-20rem)] p-6">
               <div className="space-y-4">
@@ -114,6 +200,8 @@ const Chat = () => {
                       className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                         message.sender === "user"
                           ? "bg-cta-blue text-white"
+                          : message.crisisDetected
+                          ? "bg-red-50 border-2 border-red-200 text-foreground"
                           : "bg-primary/10 text-foreground"
                       }`}
                     >

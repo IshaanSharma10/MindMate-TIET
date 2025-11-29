@@ -9,6 +9,9 @@ import Insights from "./pages/Insights";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import Journal from "./pages/Journal";
+import Wellness from "./pages/Wellness";
+import MoodTracker from "./pages/MoodTracker";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +26,9 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/insights" element={<Insights />} />
+          <Route path="/journal" element={<Journal />} />
+          <Route path="/wellness" element={<Wellness />} />
+          <Route path="/mood-tracker" element={<MoodTracker />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
