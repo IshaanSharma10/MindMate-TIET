@@ -361,8 +361,23 @@ const Insights = () => {
             <CardContent>
               <div className="space-y-3">
                 {Object.entries(chatMoodCorrelation).slice(0, 5).map(([topic, moods]: [string, any]) => {
-                  const total = Object.values(moods).reduce((sum: number, count: any) => sum + count, 0);
-                  const dominantMood = Object.entries(moods).sort((a: any, b: any) => b[1] - a[1])[0];
+                  if (!moods || typeof moods !== 'object') return null;
+                  const total = Object.values(moods).reduce((sum: number, count: any) => {
+                    const num = typeof count === 'number' ? count : Number(count) || 0;
+                    return sum + num;
+                  }, 0);
+                  if (total === 0) return null;
+                  const moodEntries = Object.entries(moods).filter(([_, count]) => {
+                    const countNum = typeof count === 'number' ? count : Number(count) || 0;
+                    return countNum > 0;
+                  });
+                  if (moodEntries.length === 0) return null;
+                  const dominantMood = moodEntries.sort((a: any, b: any) => {
+                    const aVal = typeof a[1] === 'number' ? a[1] : Number(a[1]) || 0;
+                    const bVal = typeof b[1] === 'number' ? b[1] : Number(b[1]) || 0;
+                    return bVal - aVal;
+                  })[0];
+                  if (!dominantMood) return null;
                   
                   return (
                     <div key={topic} className="p-3 rounded-lg border border-border bg-card">
@@ -370,9 +385,9 @@ const Insights = () => {
                         <span className="font-medium capitalize">{topic}</span>
                         <Badge
                           variant="outline"
-                          className={`text-xs ${getMoodColor(dominantMood[0])}`}
+                          className={`text-xs ${getMoodColor(dominantMood[0] as string)}`}
                         >
-                          {getMoodEmoji(dominantMood[0])} Mostly {dominantMood[0]}
+                          {getMoodEmoji(dominantMood[0] as string)} Mostly {dominantMood[0]}
                         </Badge>
                       </div>
                       <div className="flex gap-2 flex-wrap">
