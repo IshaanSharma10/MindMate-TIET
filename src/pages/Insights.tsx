@@ -5,8 +5,10 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, R
 import meditationIllustration from "@/assets/meditation-illustration.png";
 import { auth } from "@/FirebaseConfig";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { Loader2, MessageSquare, BookOpen, TrendingUp, Sparkles } from "lucide-react";
+import { Loader2, MessageSquare, BookOpen, TrendingUp, Sparkles, FileDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/use-toast";
 
 const Insights = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -17,6 +19,7 @@ const Insights = () => {
   const [timeline, setTimeline] = useState<any[]>([]);
   const [aiInsights, setAiInsights] = useState<string | null>(null);
   const [chatMoodCorrelation, setChatMoodCorrelation] = useState<any>({});
+  const [generatingReport, setGeneratingReport] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -70,6 +73,52 @@ const Insights = () => {
       console.error("Failed to fetch insights:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const downloadReport = async () => {
+    if (!user) {
+      toast({
+        title: "Please sign in",
+        description: "You need to be signed in to generate a report.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGeneratingReport(true);
+    try {
+      const response = await fetch(`http://localhost:5001/api/mood-report/${user.uid}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to generate report");
+      }
+
+      // Convert response to blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `MindMate_Wellness_Report_${new Date().toISOString().split("T")[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Report Downloaded! 📊",
+        description: "Your personalized wellness report has been downloaded.",
+      });
+    } catch (error: any) {
+      console.error("Report generation failed:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate report. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingReport(false);
     }
   };
 
@@ -152,12 +201,34 @@ const Insights = () => {
       <Header />
       <div className="container mx-auto px-4 py-6 md:px-6 lg:px-8">
         <div className="mb-8 animate-fade-in">
-          <h1 className="text-3xl font-bold md:text-4xl">Your Mental Wellness Journey</h1>
-          {insights && (
-            <p className="mt-2 text-muted-foreground">
-              Weekly Average: {insights.weeklyAverage || 50}/100
-            </p>
-          )}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold md:text-4xl">Your Mental Wellness Journey</h1>
+              {insights && (
+                <p className="mt-2 text-muted-foreground">
+                  Weekly Average: {insights.weeklyAverage || 50}/100
+                </p>
+              )}
+            </div>
+            <Button
+              onClick={downloadReport}
+              disabled={generatingReport || !insights}
+              className="sm:self-start"
+              size="lg"
+            >
+              {generatingReport ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating Report...
+                </>
+              ) : (
+                <>
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Download PDF Report
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2 mb-6 animate-fade-in">

@@ -12,6 +12,7 @@ import Signup from "./pages/Signup";
 import Journal from "./pages/Journal";
 import Wellness from "./pages/Wellness";
 import MoodTracker from "./pages/MoodTracker";
+import FacialExpression from "./pages/FacialExpression";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/journal" element={<Journal />} />
           <Route path="/wellness" element={<Wellness />} />
           <Route path="/mood-tracker" element={<MoodTracker />} />
+          <Route path="/facial-expression" element={<FacialExpression />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />

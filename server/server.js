@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import multer from "multer";
 import fs from "fs";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import PDFDocument from "pdfkit";
 
 dotenv.config();
 
@@ -199,6 +200,9 @@ Respond naturally and conversationally as a supportive mental health coach would
     });
   }
 });
+
+// Facial expression analysis is now handled client-side using MediaPipe
+// No backend endpoint needed - all processing happens in the browser
 
 // Audio analysis endpoint
 app.post("/api/audio-analyze", upload.single("audio"), async (req, res) => {
@@ -908,20 +912,95 @@ Respond with only the insights, no additional formatting.`;
 // Helper function to detect mood from text
 function detectMoodFromText(text) {
   const lowerText = text.toLowerCase();
-  const moodKeywords = {
-    happy: ["happy", "great", "good", "wonderful", "amazing", "excited", "joy", "love", "grateful"],
-    calm: ["calm", "peaceful", "relaxed", "serene", "content", "fine", "okay"],
-    anxious: ["anxious", "worried", "nervous", "stress", "panic", "scared", "afraid", "fear"],
-    sad: ["sad", "down", "depressed", "unhappy", "upset", "cry", "lonely", "hurt"],
-    stressed: ["stressed", "overwhelmed", "pressure", "busy", "exhausted", "tired", "burnout"]
+  
+  // Check for multi-word phrases FIRST (higher priority)
+  const phrasePatterns = {
+    sad: ["passed away", "passed on", "died", "funeral", "breakup", "broke up", "divorce", "fired", "laid off", "left me"],
+    happy: ["new car", "got the job", "passed exam", "passed test", "got engaged", "getting married"],
+    anxious: ["test tomorrow", "exam tomorrow", "interview tomorrow", "waiting for results"],
+    stressed: ["so much work", "no time", "can't handle", "running late", "money problems"]
   };
-
-  for (const [mood, keywords] of Object.entries(moodKeywords)) {
-    if (keywords.some(keyword => lowerText.includes(keyword))) {
-      return mood;
+  
+  // Check phrases first (they take priority)
+  for (const [mood, phrases] of Object.entries(phrasePatterns)) {
+    for (const phrase of phrases) {
+      if (lowerText.includes(phrase)) {
+        console.log(`Phrase match: "${phrase}" → ${mood}`);
+        return mood;
+      }
     }
   }
-  return "neutral";
+  
+  // Expanded keyword lists for better detection
+  const moodKeywords = {
+    happy: [
+      // Explicit emotions
+      "happy", "great", "good", "wonderful", "amazing", "excited", "joy", "joyful",
+      "love", "grateful", "thankful", "blessed", "fantastic", "awesome", "excellent",
+      "cheerful", "delighted", "pleased", "thrilled", "ecstatic", "elated", "glad",
+      "blissful", "satisfied", "positive", "optimistic", "hopeful",
+      "brilliant", "perfect", "proud", "accomplished", "successful",
+      // Context words (typically happy events)
+      "bought", "promotion", "engaged", "married", "wedding", "birthday",
+      "vacation", "holiday", "won", "graduated", "celebrate", "party",
+      "accepted", "raise", "bonus", "surprise", "gift", "baby"
+    ],
+    calm: [
+      "calm", "peaceful", "relaxed", "serene", "tranquil", "mellow", "chill",
+      "balanced", "centered", "grounded", "mindful", "meditative", "quiet",
+      "still", "composed", "collected", "soothed", "comfortable", "easy", "gentle",
+      "resting", "weekend", "nothing much", "just chilling", "fine", "okay", "alright"
+    ],
+    anxious: [
+      "anxious", "worried", "nervous", "panic", "scared", "afraid", "fear",
+      "fearful", "terrified", "dread", "uneasy", "tense", "restless", "agitated",
+      "jittery", "apprehensive", "concerned", "troubled", "disturbed",
+      "insecure", "uncertain", "doubtful", "overthinking",
+      // Context words
+      "interview", "exam", "waiting", "results", "doctor", "dentist", "flight", 
+      "presentation", "meeting"
+    ],
+    sad: [
+      "sad", "down", "depressed", "unhappy", "upset", "cry", "crying", "lonely",
+      "hurt", "heartbroken", "miserable", "gloomy", "melancholy", "sorrowful",
+      "grief", "grieving", "mourning", "disappointed", "hopeless", "despair",
+      "empty", "numb", "lost", "broken", "devastated", "terrible", "awful", "bad",
+      // Context words
+      "died", "death", "funeral", "rejected", "failed", "miss", "missing", "gone"
+    ],
+    stressed: [
+      "stressed", "overwhelmed", "pressure", "busy", "exhausted", "tired", "burnout",
+      "burned out", "drained", "fatigued", "worn out", "overworked", "swamped",
+      "frantic", "hectic", "chaotic", "crazy", "frustrated", "irritated", "annoyed",
+      "angry", "mad", "furious", "under pressure", "deadline", "too much",
+      // Context words
+      "bills", "debt", "argument", "fight"
+    ]
+  };
+
+  // Count matches for each mood
+  const moodScores = {};
+  for (const [mood, keywords] of Object.entries(moodKeywords)) {
+    moodScores[mood] = 0;
+    for (const keyword of keywords) {
+      if (lowerText.includes(keyword)) {
+        moodScores[mood]++;
+      }
+    }
+  }
+
+  // Find the mood with the highest score
+  let bestMood = "neutral";
+  let highestScore = 0;
+  for (const [mood, score] of Object.entries(moodScores)) {
+    if (score > highestScore) {
+      highestScore = score;
+      bestMood = mood;
+    }
+  }
+
+  console.log(`Keyword scores:`, moodScores, `→ ${bestMood}`);
+  return bestMood;
 }
 
 // Helper function to extract topics from text
@@ -952,29 +1031,73 @@ app.post("/api/detect-mood", async (req, res) => {
       return res.status(400).json({ error: "Text is required" });
     }
 
+    console.log("Mood detection request for text:", text);
+
     const model = genAI.getGenerativeModel({ 
       model: "gemini-2.5-flash",
       generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 50,
+        temperature: 0.1,
+        maxOutputTokens: 10,
       },
     });
 
-    const prompt = `Analyze this text and determine the person's emotional state. Respond with ONLY one word from this list: happy, sad, anxious, calm, stressed, neutral.
+    const prompt = `You are an expert emotion analyst. Analyze the emotional tone and context of this text. Consider:
+- What is the person talking about?
+- What emotion would a person LIKELY be feeling when saying this?
+- Infer the underlying emotion even if not explicitly stated.
 
-Text: "${text}"
+Examples:
+- "I bought a new car" → happy (exciting purchase)
+- "I lost my wallet" → stressed or sad
+- "I have a job interview tomorrow" → anxious
+- "Just finished my exams" → calm or happy
+- "My dog passed away" → sad
 
-Respond with just the emotion word, nothing else.`;
+VALID EMOTIONS: happy, sad, anxious, calm, stressed, neutral
 
-    const result = await model.generateContent(prompt);
-    const detectedMood = result.response.text().toLowerCase().trim();
+TEXT: "${text}"
+
+Based on context and common human experience, what emotion is this person MOST LIKELY feeling?
+RESPOND WITH EXACTLY ONE WORD from the valid emotions list. Nothing else.`;
+
+    let detectedMood = "";
+    try {
+      const result = await model.generateContent(prompt);
+      const responseText = result.response?.text() || "";
+      detectedMood = responseText.toLowerCase().trim();
+      
+      // Clean up the response - remove any punctuation, quotes, or extra text
+      detectedMood = detectedMood.replace(/[^a-z]/g, '');
+      
+      console.log("Gemini raw response:", responseText);
+      console.log("Cleaned mood:", detectedMood);
+    } catch (geminiError) {
+      console.error("Gemini API error:", geminiError.message);
+      // Fall through to keyword detection
+    }
 
     // Validate the detected mood
     const validMoods = ["happy", "sad", "anxious", "calm", "stressed", "neutral"];
-    const mood = validMoods.includes(detectedMood) ? detectedMood : detectMoodFromText(text);
+    
+    // Check if the response contains any valid mood word
+    let finalMood = null;
+    for (const validMood of validMoods) {
+      if (detectedMood.includes(validMood)) {
+        finalMood = validMood;
+        break;
+      }
+    }
+    
+    // If Gemini didn't return a valid mood, use keyword detection
+    if (!finalMood) {
+      console.log("Gemini mood not valid, using keyword fallback");
+      finalMood = detectMoodFromText(text);
+    }
+
+    console.log("Final detected mood:", finalMood);
 
     res.json({
-      detectedMood: mood,
+      detectedMood: finalMood,
       confidence: "high",
       originalText: text,
     });
@@ -982,6 +1105,7 @@ Respond with just the emotion word, nothing else.`;
     console.error("Mood detection error:", err);
     // Fallback to keyword-based detection
     const fallbackMood = detectMoodFromText(req.body.text || "");
+    console.log("Error fallback mood:", fallbackMood);
     res.json({
       detectedMood: fallbackMood,
       confidence: "medium",
@@ -1089,6 +1213,291 @@ app.get("/api/mood-patterns/:userId", async (req, res) => {
   } catch (err) {
     console.error("Mood patterns error:", err);
     res.status(500).json({ error: "Failed to analyze mood patterns" });
+  }
+});
+
+// Generate PDF Mood Report
+app.get("/api/mood-report/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const userData = getUserData(userId);
+
+    if (userData.moods.length === 0) {
+      return res.status(400).json({ error: "No mood data available to generate report" });
+    }
+
+    // Calculate statistics
+    const moodValues = { happy: 90, calm: 75, neutral: 50, anxious: 30, sad: 20, stressed: 25 };
+    const moodLabels = { happy: "Happy", calm: "Calm", neutral: "Neutral", anxious: "Anxious", sad: "Sad", stressed: "Stressed" };
+    
+    // Count moods
+    const moodCounts = {};
+    let totalScore = 0;
+    userData.moods.forEach(m => {
+      moodCounts[m.mood] = (moodCounts[m.mood] || 0) + 1;
+      totalScore += moodValues[m.mood] || 50;
+    });
+    
+    const averageScore = Math.round(totalScore / userData.moods.length);
+    const sortedMoods = Object.entries(moodCounts).sort((a, b) => b[1] - a[1]);
+    const dominantMood = sortedMoods[0]?.[0] || "neutral";
+    
+    // Calculate trend
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const recentMoods = userData.moods.filter(m => new Date(m.timestamp) >= sevenDaysAgo);
+    const recentAvg = recentMoods.length > 0
+      ? Math.round(recentMoods.reduce((sum, m) => sum + (moodValues[m.mood] || 50), 0) / recentMoods.length)
+      : 50;
+
+    // Generate AI insights
+    let aiInsights = "";
+    try {
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const insightPrompt = `You are a mental health advisor. Based on this mood data, provide personalized insights and recommendations.
+
+Mood Statistics:
+- Total check-ins: ${userData.moods.length}
+- Average mood score: ${averageScore}/100
+- Most common mood: ${dominantMood}
+- Recent 7-day average: ${recentAvg}/100
+- Mood breakdown: ${sortedMoods.map(([mood, count]) => `${mood}: ${count} times`).join(", ")}
+
+Recent mood entries with notes:
+${userData.moods.slice(-10).map(m => `- ${m.mood}${m.note ? `: "${m.note}"` : ""}`).join("\n")}
+
+Provide:
+1. A brief summary of their emotional state (2-3 sentences)
+2. 3 specific, actionable recommendations to improve their mood
+3. One positive affirmation
+
+Keep it warm, supportive, and concise (under 300 words total).`;
+
+      const result = await model.generateContent(insightPrompt);
+      aiInsights = result.response.text();
+    } catch (aiError) {
+      console.error("AI insights error:", aiError);
+      aiInsights = "Unable to generate AI insights at this time. Please try again later.";
+    }
+
+    // Create PDF with better styling
+    const doc = new PDFDocument({ 
+      margin: 40,
+      size: "A4",
+      bufferPages: true
+    });
+    
+    // Set response headers for PDF download
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename=MindMate_Wellness_Report_${new Date().toISOString().split("T")[0]}.pdf`);
+    
+    // Pipe the PDF to the response
+    doc.pipe(res);
+
+    const pageWidth = doc.page.width - 80;
+    const colors = {
+      primary: "#6366F1",
+      primaryLight: "#EEF2FF",
+      success: "#10B981",
+      warning: "#F59E0B",
+      danger: "#EF4444",
+      text: "#1F2937",
+      textLight: "#6B7280",
+      border: "#E5E7EB",
+      happy: "#FCD34D",
+      calm: "#60A5FA",
+      neutral: "#9CA3AF",
+      anxious: "#FB923C",
+      sad: "#A78BFA",
+      stressed: "#F87171"
+    };
+
+    // ========== HEADER ==========
+    // Header background
+    doc.rect(0, 0, doc.page.width, 120).fill(colors.primary);
+    
+    // Logo/Title
+    doc.fontSize(32).font("Helvetica-Bold").fillColor("#FFFFFF")
+       .text("MindMate", 40, 30);
+    doc.fontSize(14).font("Helvetica").fillColor("#E0E7FF")
+       .text("Personal Wellness Report", 40, 65);
+    doc.fontSize(11).fillColor("#C7D2FE")
+       .text(new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }), 40, 85);
+
+    // Score badge on right side
+    const scoreX = doc.page.width - 120;
+    doc.circle(scoreX, 60, 35).fill("#FFFFFF");
+    doc.fontSize(24).font("Helvetica-Bold").fillColor(colors.primary)
+       .text(averageScore.toString(), scoreX - 20, 48, { width: 40, align: "center" });
+    doc.fontSize(8).font("Helvetica").fillColor(colors.textLight)
+       .text("SCORE", scoreX - 20, 72, { width: 40, align: "center" });
+
+    doc.y = 140;
+
+    // ========== QUICK STATS ROW ==========
+    const statBoxWidth = (pageWidth - 30) / 4;
+    const stats = [
+      { label: "Total Check-ins", value: userData.moods.length.toString(), color: colors.primary },
+      { label: "Avg. Score", value: `${averageScore}/100`, color: colors.success },
+      { label: "7-Day Avg", value: `${recentAvg}/100`, color: colors.warning },
+      { label: "Entries This Week", value: recentMoods.length.toString(), color: colors.calm }
+    ];
+
+    stats.forEach((stat, i) => {
+      const x = 40 + (i * (statBoxWidth + 10));
+      // Box background
+      doc.roundedRect(x, doc.y, statBoxWidth, 60, 8).fill("#F9FAFB");
+      // Value
+      doc.fontSize(20).font("Helvetica-Bold").fillColor(stat.color)
+         .text(stat.value, x + 10, doc.y + 12, { width: statBoxWidth - 20 });
+      // Label
+      doc.fontSize(9).font("Helvetica").fillColor(colors.textLight)
+         .text(stat.label, x + 10, doc.y + 38, { width: statBoxWidth - 20 });
+    });
+
+    doc.y += 80;
+
+    // ========== DOMINANT MOOD SECTION ==========
+    doc.roundedRect(40, doc.y, pageWidth, 70, 8).fill(colors.primaryLight);
+    doc.fontSize(11).font("Helvetica-Bold").fillColor(colors.primary)
+       .text("YOUR DOMINANT MOOD", 55, doc.y + 15);
+    
+    // Draw colored mood indicator circle
+    const moodY = doc.y + 45;
+    doc.circle(70, moodY, 12).fill(colors[dominantMood] || colors.neutral);
+    doc.fontSize(28).font("Helvetica-Bold").fillColor(colors.text)
+       .text(dominantMood.charAt(0).toUpperCase() + dominantMood.slice(1), 95, doc.y + 32);
+
+    doc.y += 90;
+
+    // ========== MOOD BREAKDOWN WITH VISUAL BARS ==========
+    doc.fontSize(14).font("Helvetica-Bold").fillColor(colors.text)
+       .text("Mood Breakdown", 40, doc.y);
+    doc.y += 25;
+
+    const maxCount = Math.max(...sortedMoods.map(([_, count]) => count));
+    sortedMoods.forEach(([mood, count]) => {
+      const percentage = Math.round((count / userData.moods.length) * 100);
+      const barWidth = (count / maxCount) * (pageWidth - 120);
+      
+      // Colored circle indicator
+      doc.circle(50, doc.y + 8, 6).fill(colors[mood] || colors.neutral);
+      
+      // Mood label
+      doc.fontSize(11).font("Helvetica").fillColor(colors.text)
+         .text(mood.charAt(0).toUpperCase() + mood.slice(1), 65, doc.y, { width: 60 });
+      
+      // Background bar
+      doc.roundedRect(130, doc.y + 2, pageWidth - 120, 14, 4).fill("#E5E7EB");
+      
+      // Colored bar
+      if (barWidth > 0) {
+        doc.roundedRect(130, doc.y + 2, barWidth, 14, 4).fill(colors[mood] || colors.neutral);
+      }
+      
+      // Percentage text
+      doc.fontSize(10).font("Helvetica-Bold").fillColor(colors.textLight)
+         .text(`${percentage}%`, pageWidth - 10, doc.y + 2, { width: 40, align: "right" });
+      
+      doc.y += 24;
+    });
+
+    doc.y += 15;
+
+    // ========== RECENT MOOD ENTRIES ==========
+    doc.fontSize(14).font("Helvetica-Bold").fillColor(colors.text)
+       .text("Recent Mood Entries", 40, doc.y);
+    doc.y += 20;
+
+    // Table header
+    doc.roundedRect(40, doc.y, pageWidth, 25, 4).fill("#F3F4F6");
+    doc.fontSize(9).font("Helvetica-Bold").fillColor(colors.textLight);
+    doc.text("DATE & TIME", 50, doc.y + 8);
+    doc.text("MOOD", 180, doc.y + 8);
+    doc.text("NOTE", 280, doc.y + 8);
+    doc.y += 30;
+
+    const recentEntries = userData.moods.slice(-5).reverse();
+    recentEntries.forEach((entry, i) => {
+      const rowY = doc.y;
+      const date = new Date(entry.timestamp);
+      const dateStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const timeStr = date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+      
+      // Alternating row background
+      if (i % 2 === 0) {
+        doc.rect(40, rowY - 2, pageWidth, 22).fill("#FAFAFA");
+      }
+      
+      // Date
+      doc.fontSize(10).font("Helvetica").fillColor(colors.text)
+         .text(`${dateStr}, ${timeStr}`, 50, rowY + 4);
+      
+      // Mood with color indicator
+      doc.circle(185, rowY + 9, 5).fill(colors[entry.mood] || colors.neutral);
+      doc.fontSize(10).font("Helvetica").fillColor(colors.text)
+         .text(entry.mood.charAt(0).toUpperCase() + entry.mood.slice(1), 195, rowY + 4);
+      
+      // Note (truncated)
+      const note = entry.note ? (entry.note.length > 35 ? entry.note.substring(0, 35) + "..." : entry.note) : "-";
+      doc.fontSize(9).font("Helvetica").fillColor(colors.textLight)
+         .text(note, 280, rowY + 4, { width: pageWidth - 250 });
+      
+      doc.y += 24;
+    });
+
+    doc.y += 20;
+
+    // ========== AI INSIGHTS SECTION ==========
+    // Check if we need a new page
+    if (doc.y > 600) {
+      doc.addPage();
+      doc.y = 50;
+    }
+
+    doc.roundedRect(40, doc.y, pageWidth, 20, 4).fill(colors.primary);
+    doc.fontSize(11).font("Helvetica-Bold").fillColor("#FFFFFF")
+       .text("AI-POWERED INSIGHTS & RECOMMENDATIONS", 50, doc.y + 5);
+    doc.y += 30;
+
+    // AI content box
+    const aiBoxY = doc.y;
+    doc.roundedRect(40, aiBoxY, pageWidth, 200, 8)
+       .lineWidth(1).stroke(colors.border);
+    
+    doc.fontSize(10).font("Helvetica").fillColor(colors.text)
+       .text(aiInsights, 55, aiBoxY + 15, { 
+         width: pageWidth - 30, 
+         align: "left", 
+         lineGap: 4 
+       });
+
+    // ========== FOOTER ==========
+    const footerY = doc.page.height - 60;
+    doc.rect(0, footerY, doc.page.width, 60).fill("#F9FAFB");
+    
+    doc.fontSize(9).font("Helvetica").fillColor(colors.textLight)
+       .text("This report is generated by MindMate AI for personal wellness tracking.", 40, footerY + 15, { 
+         width: pageWidth, 
+         align: "center" 
+       });
+    doc.fontSize(8).fillColor(colors.textLight)
+       .text("If you are experiencing severe emotional distress, please seek professional help.", 40, footerY + 30, { 
+         width: pageWidth, 
+         align: "center" 
+       });
+    doc.fontSize(8).font("Helvetica-Bold").fillColor(colors.primary)
+       .text("www.mindmate.app", 40, footerY + 45, { 
+         width: pageWidth, 
+         align: "center" 
+       });
+
+    // Finalize the PDF
+    doc.end();
+
+  } catch (err) {
+    console.error("PDF report error:", err);
+    res.status(500).json({ error: "Failed to generate mood report" });
   }
 });
 
